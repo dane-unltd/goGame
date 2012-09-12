@@ -11,9 +11,11 @@ func (this *BrdDrawer) Id() string {
 	return "BrdDrawer"
 }
 
-func (this *BrdDrawer) Init(g core.Graphics, sim *core.Sim) {
-	this.g = g
-	this.board = sim.Sys("Board").(*Board)
+func NewBrdDrawer(sim *core.Sim, g core.Graphics) *BrdDrawer {
+	return &BrdDrawer{
+		sim.Sys("Board").(*Board),
+		g,
+	}
 }
 
 func (this *BrdDrawer) Swap() {
