@@ -18,7 +18,7 @@ type Board struct {
 
 	helper                 [][]bool
 	currPlayer, nextPlayer uint32
-	rx                     *core.CltRx
+	cmdSrc                 core.CmdSrc
 }
 
 func (board *Board) Board() [][]byte {
@@ -29,11 +29,10 @@ func (board *Board) Id() string {
 	return "Board"
 }
 
-func NewBoard(sim *core.Sim) *Board {
+func NewBoard() *Board {
 	board := &Board{}
 
 	board.currPlayer = 1
-	board.rx = sim.Sys("CltRx").(*core.CltRx)
 
 	board.currBoard = make([][]byte, BOARD)
 	board.nextBoard = make([][]byte, BOARD)
@@ -57,6 +56,10 @@ func NewBoard(sim *core.Sim) *Board {
 	return board
 }
 
+func (board *Board) UpdateDeps(sim *core.Sim, deps map[string]string) {
+	board.cmdSrc = sim.Sys(deps["CmdSrc"]).(core.CmdSrc)
+}
+
 func (board *Board) Swap() {
 	temp := board.currBoard
 	board.currBoard = board.nextBoard
@@ -74,9 +77,9 @@ func (board *Board) Update() {
 	copy(board.nextNbrs, board.currNbrs)
 
 	board.nextPlayer = board.currPlayer
-	cmd := board.rx.Cmd(board.currPlayer)
+	cmd := board.cmdSrc.Cmd(board.currPlayer)
 
-	fmt.Println(cmd)
+	fmt.Println("Board:", cmd)
 
 	if cmd.Actions&core.ACTION1 > 0 {
 		x := cmd.X / DIST

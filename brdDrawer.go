@@ -7,44 +7,48 @@ type BrdDrawer struct {
 	g     core.Graphics
 }
 
-func (this *BrdDrawer) Id() string {
+func (brdDrw *BrdDrawer) Id() string {
 	return "BrdDrawer"
 }
 
-func NewBrdDrawer(sim *core.Sim, g core.Graphics) *BrdDrawer {
+func NewBrdDrawer(g core.Graphics) *BrdDrawer {
 	return &BrdDrawer{
-		sim.Sys("Board").(*Board),
+		nil,
 		g,
 	}
 }
 
-func (this *BrdDrawer) Swap() {
+func (brdDrw *BrdDrawer) Swap() {
 }
 
-func (this *BrdDrawer) Update() {
-	brd := this.board.Board()
+func (brdDrw *BrdDrawer) UpdateDeps(sim *core.Sim, deps map[string]string) {
+	brdDrw.board = sim.Sys(deps["Board"]).(*Board)
+}
+
+func (brdDrw *BrdDrawer) Update() {
+	brd := brdDrw.board.Board()
 	var max float32 = BOARD * DIST
 	for i := 0; i < BOARD; i++ {
 		v := float32(i)*DIST + DIST/2
-		this.g.DrawLine(0, v, max, v)
-		this.g.DrawLine(v, 0, v, max)
+		brdDrw.g.DrawLine(0, v, max, v)
+		brdDrw.g.DrawLine(v, 0, v, max)
 	}
 
 	for i := range brd {
 		for j := range brd[i] {
 			if brd[i][j] > 0 {
-				this.draw(i, j, brd[i][j])
+				brdDrw.draw(i, j, brd[i][j])
 			}
 		}
 	}
 }
 
-func (this *BrdDrawer) draw(i, j int, player byte) {
+func (brdDrw *BrdDrawer) draw(i, j int, player byte) {
 	x := float32(i)*DIST + DIST/2
 	y := float32(j)*DIST + DIST/2
 	if player == 1 {
-		this.g.DrawEntity(x, y, 0.0, "white")
+		brdDrw.g.DrawEntity(x, y, 0.0, "white")
 	} else {
-		this.g.DrawEntity(x, y, 0.0, "black")
+		brdDrw.g.DrawEntity(x, y, 0.0, "black")
 	}
 }

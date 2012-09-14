@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"runtime"
+	"time"
 )
 
 func main() {
@@ -47,24 +48,34 @@ func main() {
 
 	input := core.NewInput()
 
-	sim.AddComp(0, rcv)
-	sim.AddComp(0, input)
-	sim.AddComp(0, core.NewCltTx(conn, sim))
-	sim.AddComp(0, NewBoard(sim))
-	sim.AddComp(0, NewBrdDrawer(sim, g))
+	deps := map[string]map[string]string{
+		"Input":     map[string]string{"TimeSrc": "CltRx"},
+		"Board":     map[string]string{"CmdSrc": "CltRx"},
+		"CltTx":     map[string]string{"CmdSrc": "Input"},
+		"BrdDrawer": map[string]string{"Board": "Board"},
+	}
+	sim.AddComp(false, 0, rcv)
+	sim.AddComp(true, 0, input)
+	sim.AddComp(true, 0, core.NewCltTx(conn))
+	sim.AddComp(false, 0, NewBoard())
+	sim.AddComp(true, 0, NewBrdDrawer(g))
+
+	sim.UpdateDeps(deps)
 
 	fmt.Println("entering loop")
 
+	rcv.RxLocalId()
+
+	clk := time.Tick(rcv.FrameNS())
+
+	go sim.RunAsync(rcv)
+
 loop:
 	for {
-		err = rcv.Receive()
-		if err != nil {
-			fmt.Println(err)
-			break
-		}
+		<-clk
 
 		g.PreFrame()
-		sim.Update()
+		sim.SyncUpdate()
 
 		if input.Quit() {
 			break loop
