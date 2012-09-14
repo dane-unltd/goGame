@@ -56,7 +56,7 @@ func NewBoard() *Board {
 	return board
 }
 
-func (board *Board) UpdateDeps(sim *core.Sim, deps map[string]string) {
+func (board *Board) Init(g core.Graphics, sim *core.Sim, deps map[string]string) {
 	board.cmdSrc = sim.Sys(deps["CmdSrc"]).(core.CmdSrc)
 }
 

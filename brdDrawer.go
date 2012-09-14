@@ -11,17 +11,15 @@ func (brdDrw *BrdDrawer) Id() string {
 	return "BrdDrawer"
 }
 
-func NewBrdDrawer(g core.Graphics) *BrdDrawer {
-	return &BrdDrawer{
-		nil,
-		g,
-	}
+func NewBrdDrawer() *BrdDrawer {
+	return &BrdDrawer{}
 }
 
 func (brdDrw *BrdDrawer) Swap() {
 }
 
-func (brdDrw *BrdDrawer) UpdateDeps(sim *core.Sim, deps map[string]string) {
+func (brdDrw *BrdDrawer) Init(g core.Graphics, sim *core.Sim, deps map[string]string) {
+	brdDrw.g = g
 	brdDrw.board = sim.Sys(deps["Board"]).(*Board)
 }
 
