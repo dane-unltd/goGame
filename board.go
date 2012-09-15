@@ -4,58 +4,80 @@ import "github.com/dane-unltd/core"
 
 import "fmt"
 
-const (
-	BOARD = 7
-	DIST  = 50
-)
-
 type Point struct {
 	x, y int
 }
-type Board struct {
-	currNbrs, nextNbrs   [][]byte
-	currBoard, nextBoard [][]byte
 
-	helper                 [][]bool
-	currPlayer, nextPlayer uint32
-	cmdSrc                 core.CmdSrc
-	sp                     bool
+type boardState struct {
+	brd, nbrs [][]byte
+	pass, fin bool
+	plr       uint32
+	points    [2]int
+}
+
+type Board struct {
+	curr, next *boardState
+	helper     [][]bool
+	cmdSrc     core.CmdSrc
+	sp         bool
+	sz         int
+	scale      float32
+}
+
+func NewBoardState(size int) *boardState {
+	state := &boardState{
+		make([][]byte, size),
+		make([][]byte, size),
+		false, false,
+		1,
+		[2]int{0, 0},
+	}
+
+	for i := range state.brd {
+		state.brd[i] = make([]byte, size)
+		state.nbrs[i] = make([]byte, size)
+	}
+
+	for i := 0; i < size; i++ {
+		state.nbrs[i][0] += 1
+		state.nbrs[i][size-1] += 1
+		state.nbrs[0][i] += 1
+		state.nbrs[size-1][i] += 1
+	}
+	return state
+}
+
+func NewBoard(sp bool, size int, scale float32) *Board {
+	board := &Board{
+		NewBoardState(size), NewBoardState(size),
+		make([][]bool, size),
+		nil,
+		sp,
+		size,
+		scale,
+	}
+
+	for i := range board.helper {
+		board.helper[i] = make([]bool, board.sz)
+	}
+
+	return board
 }
 
 func (board *Board) Board() [][]byte {
-	return board.currBoard
+	return board.curr.brd
+}
+
+func (board *Board) Params() (int, float32) {
+	return board.sz, board.scale
+}
+
+func (board *Board) Result() (bool, [2]int) {
+	return board.curr.fin, board.curr.points
 }
 
 func (board *Board) Id() string {
 	return "Board"
-}
-
-func NewBoard(sp bool) *Board {
-	board := &Board{}
-
-	board.sp = sp
-	board.currPlayer = 1
-
-	board.currBoard = make([][]byte, BOARD)
-	board.nextBoard = make([][]byte, BOARD)
-	board.currNbrs = make([][]byte, BOARD)
-	board.nextNbrs = make([][]byte, BOARD)
-	board.helper = make([][]bool, BOARD)
-	for i := range board.currBoard {
-		board.currBoard[i] = make([]byte, BOARD)
-		board.nextBoard[i] = make([]byte, BOARD)
-		board.currNbrs[i] = make([]byte, BOARD)
-		board.nextNbrs[i] = make([]byte, BOARD)
-		board.helper[i] = make([]bool, BOARD)
-	}
-
-	for i := 0; i < BOARD; i++ {
-		board.currNbrs[i][0] += 1
-		board.currNbrs[i][BOARD-1] += 1
-		board.currNbrs[0][i] += 1
-		board.currNbrs[BOARD-1][i] += 1
-	}
-	return board
 }
 
 func (board *Board) Init(g core.Graphics, sim core.Sim, deps map[string]string) {
@@ -63,58 +85,69 @@ func (board *Board) Init(g core.Graphics, sim core.Sim, deps map[string]string) 
 }
 
 func (board *Board) Swap() {
-	temp := board.currBoard
-	board.currBoard = board.nextBoard
-	board.nextBoard = temp
-
-	temp = board.currNbrs
-	board.currNbrs = board.nextNbrs
-	board.nextNbrs = temp
-
-	board.currPlayer = board.nextPlayer
+	temp := board.curr
+	board.curr = board.next
+	board.next = temp
 }
 
 func (board *Board) Update() {
-	copy(board.nextBoard, board.currBoard)
-	copy(board.nextNbrs, board.currNbrs)
+	copy(board.next.brd, board.curr.brd)
+	copy(board.next.nbrs, board.curr.nbrs)
 
-	board.nextPlayer = board.currPlayer
+	board.next.plr = board.curr.plr
+	board.next.fin = board.curr.fin
+	board.next.pass = board.curr.pass
+	board.next.points = board.curr.points
+
+	if board.curr.fin {
+		return
+	}
 
 	var pId uint32
 	if board.sp {
 		pId = 1
 	} else {
-		pId = board.currPlayer
+		pId = board.curr.plr
 	}
 
 	cmd := board.cmdSrc.Cmd(pId)
 
-	fmt.Println("Board:", cmd)
+	if cmd.Actions&core.ACTION2 > 0 {
+		board.next.plr = board.curr.plr%2 + 1
+		board.next.pass = true
+		if board.curr.pass == true {
+			board.next.fin = true
+			board.calcScore()
+			fmt.Println("finished:", board.next.points)
+		}
+
+		return
+	}
 
 	if cmd.Actions&core.ACTION1 > 0 {
-		x := cmd.X / DIST
-		y := cmd.Y / DIST
-		if x >= 0 && x < BOARD && y >= 0 && y < BOARD {
+		x := int(float32(cmd.X) / 50 / board.scale)
+		y := int(float32(cmd.Y) / 50 / board.scale)
+		if x >= 0 && x < board.sz && y >= 0 && y < board.sz {
 			if board.place(x, y) {
-				board.nextPlayer = board.currPlayer%2 + 1
+				board.next.plr = board.curr.plr%2 + 1
 			}
 		}
 	}
 }
 
 func (board *Board) place(x, y int) bool {
-	if board.nextBoard[x][y] == 0 {
-		plr := board.currPlayer
+	if board.next.brd[x][y] == 0 {
+		plr := board.curr.plr
 		nbrs := board.neighbours(x, y)
 
-		board.nextBoard[x][y] = byte(plr)
+		board.next.brd[x][y] = byte(plr)
 		for _, nbr := range nbrs {
-			board.nextNbrs[nbr.x][nbr.y]++
+			board.next.nbrs[nbr.x][nbr.y]++
 		}
 
 		capt := false
 		for _, nbr := range nbrs {
-			if board.nextBoard[nbr.x][nbr.y] & ^byte(plr) > 0 {
+			if board.next.brd[nbr.x][nbr.y] & ^byte(plr) > 0 {
 				cnt, chain := board.capture(nbr.x, nbr.y)
 				if cnt > 0 {
 					capt = true
@@ -137,21 +170,21 @@ func (board *Board) place(x, y int) bool {
 }
 
 func (board *Board) capture(x, y int) (cnt int, chain []Point) {
-	plr := board.nextBoard[x][y]
+	plr := board.next.brd[x][y]
 	chain = make([]Point, 1)
 	chain[0] = Point{x, y}
 	board.helper[x][y] = true
 	cnt = 0
 	for cnt < len(chain) {
 		pt := chain[cnt]
-		if board.nextNbrs[pt.x][pt.y] < 4 {
+		if board.next.nbrs[pt.x][pt.y] < 4 {
 			cnt = 0
 			break
 		}
 		nbrs := board.neighbours(pt.x, pt.y)
 
 		for _, nbr := range nbrs {
-			if board.nextBoard[nbr.x][nbr.y] == plr {
+			if board.next.brd[nbr.x][nbr.y] == plr {
 				if board.helper[nbr.x][nbr.y] == false {
 					chain = append(chain, nbr)
 					board.helper[nbr.x][nbr.y] = true
@@ -176,10 +209,10 @@ func (board *Board) neighbours(x, y int) []Point {
 	if y > 0 {
 		nbrs = append(nbrs, Point{x, y - 1})
 	}
-	if x < BOARD-1 {
+	if x < board.sz-1 {
 		nbrs = append(nbrs, Point{x + 1, y})
 	}
-	if y < BOARD-1 {
+	if y < board.sz-1 {
 		nbrs = append(nbrs, Point{x, y + 1})
 	}
 	return nbrs
@@ -188,9 +221,65 @@ func (board *Board) neighbours(x, y int) []Point {
 func (board *Board) remove(chain []Point) {
 	for _, pt := range chain {
 		nbrs := board.neighbours(pt.x, pt.y)
-		board.nextBoard[pt.x][pt.y] = 0
+		board.next.brd[pt.x][pt.y] = 0
 		for _, nbr := range nbrs {
-			board.nextNbrs[nbr.x][nbr.y]--
+			board.next.nbrs[nbr.x][nbr.y]--
 		}
 	}
+}
+
+func (board *Board) calcScore() {
+
+	for x := 0; x < board.sz; x++ {
+		for y := 0; y < board.sz; y++ {
+			cnt, plr := board.checkTerr(x, y)
+			if plr > 0 {
+				board.next.points[plr-1] += cnt
+			}
+		}
+	}
+}
+
+func (board *Board) checkTerr(x, y int) (cnt int, plr byte) {
+	plr = board.curr.brd[x][y]
+	if plr > 0 {
+		return 1, plr
+	}
+	if board.helper[x][y] == true {
+		return 0, 0
+	}
+
+	chain := make([]Point, 1)
+	chain[0] = Point{x, y}
+	board.helper[x][y] = true
+	cnt = 0
+	neutral := false
+	for cnt < len(chain) {
+		pt := chain[cnt]
+
+		nbrs := board.neighbours(pt.x, pt.y)
+
+		for _, nbr := range nbrs {
+			curr := board.curr.brd[nbr.x][nbr.y]
+			if curr == 0 {
+				if board.helper[nbr.x][nbr.y] == false {
+					chain = append(chain, nbr)
+					board.helper[nbr.x][nbr.y] = true
+				}
+			}
+			if !neutral {
+				if curr > 0 {
+					if plr == 0 {
+						plr = curr
+					} else if plr != curr {
+						neutral = true
+						plr = 0
+					}
+				}
+			}
+		}
+
+		cnt++
+	}
+	return
 }

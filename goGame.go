@@ -4,21 +4,28 @@ import (
 	"github.com/dane-unltd/core"
 	"os"
 	"os/exec"
+	"strconv"
 )
 
 func main() {
 	var host string = "localhost:33333"
 	sp := false
+	sz := 9
 
-	if len(os.Args) > 1 {
-		if os.Args[1] == "-sp" {
+	l := len(os.Args)
+	i := 1
+	for i < l {
+		a := os.Args[i]
+		switch a {
+		case "-sp":
 			sp = true
-			if len(os.Args) > 2 {
-				host = os.Args[2]
-			}
-		} else {
-			host = os.Args[1]
+		case "-p":
+			i++
+			sz, _ = strconv.Atoi(os.Args[i])
+		default:
+			host = a
 		}
+		i++
 	}
 
 	if sp {
@@ -30,7 +37,7 @@ func main() {
 	sim := core.NewClient(os.Args[0], host)
 	defer sim.Quit()
 
-	sim.AddComp(false, 0, NewBoard(sp))
+	sim.AddComp(false, 0, NewBoard(sp, sz, 1.0))
 	sim.AddComp(true, 0, NewBrdDrawer())
 
 	sim.Run()
