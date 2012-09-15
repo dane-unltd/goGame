@@ -19,6 +19,7 @@ type Board struct {
 	helper                 [][]bool
 	currPlayer, nextPlayer uint32
 	cmdSrc                 core.CmdSrc
+	sp                     bool
 }
 
 func (board *Board) Board() [][]byte {
@@ -29,9 +30,10 @@ func (board *Board) Id() string {
 	return "Board"
 }
 
-func NewBoard() *Board {
+func NewBoard(sp bool) *Board {
 	board := &Board{}
 
+	board.sp = sp
 	board.currPlayer = 1
 
 	board.currBoard = make([][]byte, BOARD)
@@ -56,8 +58,8 @@ func NewBoard() *Board {
 	return board
 }
 
-func (board *Board) Init(g core.Graphics, sim *core.Sim, deps map[string]string) {
-	board.cmdSrc = sim.Sys(deps["CmdSrc"]).(core.CmdSrc)
+func (board *Board) Init(g core.Graphics, sim core.Sim, deps map[string]string) {
+	board.cmdSrc = sim.GetComp(deps["CmdSrc"]).(core.CmdSrc)
 }
 
 func (board *Board) Swap() {
@@ -77,7 +79,15 @@ func (board *Board) Update() {
 	copy(board.nextNbrs, board.currNbrs)
 
 	board.nextPlayer = board.currPlayer
-	cmd := board.cmdSrc.Cmd(board.currPlayer)
+
+	var pId uint32
+	if board.sp {
+		pId = 1
+	} else {
+		pId = board.currPlayer
+	}
+
+	cmd := board.cmdSrc.Cmd(pId)
 
 	fmt.Println("Board:", cmd)
 

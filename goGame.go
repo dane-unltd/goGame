@@ -1,23 +1,36 @@
 package main
 
 import (
-	//"github.com/0xe2-0x9a-0x9b/Go-SDL/sdl"
 	"github.com/dane-unltd/core"
 	"os"
+	"os/exec"
 )
 
 func main() {
-	var host string
+	var host string = "localhost:33333"
+	sp := false
 
 	if len(os.Args) > 1 {
-		host = os.Args[1]
-	} else {
-		host = "localhost:33333"
+		if os.Args[1] == "-sp" {
+			sp = true
+			if len(os.Args) > 2 {
+				host = os.Args[2]
+			}
+		} else {
+			host = os.Args[1]
+		}
 	}
-	sim := core.NewSim(os.Args[0], host)
-	defer sim.Close()
 
-	sim.AddComp(false, 0, NewBoard())
+	if sp {
+		cmd := exec.Command("srvSimple")
+		cmd.Start()
+		defer cmd.Wait()
+	}
+
+	sim := core.NewClient(os.Args[0], host)
+	defer sim.Quit()
+
+	sim.AddComp(false, 0, NewBoard(sp))
 	sim.AddComp(true, 0, NewBrdDrawer())
 
 	sim.Run()

@@ -18,9 +18,9 @@ func NewBrdDrawer() *BrdDrawer {
 func (brdDrw *BrdDrawer) Swap() {
 }
 
-func (brdDrw *BrdDrawer) Init(g core.Graphics, sim *core.Sim, deps map[string]string) {
+func (brdDrw *BrdDrawer) Init(g core.Graphics, sim core.Sim, deps map[string]string) {
 	brdDrw.g = g
-	brdDrw.board = sim.Sys(deps["Board"]).(*Board)
+	brdDrw.board = sim.GetComp(deps["Board"]).(*Board)
 }
 
 func (brdDrw *BrdDrawer) Update() {
