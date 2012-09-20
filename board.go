@@ -21,7 +21,6 @@ type Board struct {
 	cmdSrc     core.CmdSrc
 	sp         bool
 	sz         int
-	scale      float32
 }
 
 func NewBoardState(size int) *boardState {
@@ -47,14 +46,13 @@ func NewBoardState(size int) *boardState {
 	return state
 }
 
-func NewBoard(sp bool, size int, scale float32) *Board {
+func NewBoard(sp bool, size int) *Board {
 	board := &Board{
 		NewBoardState(size), NewBoardState(size),
 		make([][]bool, size),
 		nil,
 		sp,
 		size,
-		scale,
 	}
 
 	for i := range board.helper {
@@ -68,8 +66,8 @@ func (board *Board) Board() [][]byte {
 	return board.curr.brd
 }
 
-func (board *Board) Params() (int, float32) {
-	return board.sz, board.scale
+func (board *Board) Size() int {
+	return board.sz
 }
 
 func (board *Board) Result() (bool, [2]int) {
@@ -80,7 +78,7 @@ func (board *Board) Id() string {
 	return "Board"
 }
 
-func (board *Board) Init(g core.Graphics, sim core.Sim, deps map[string]string) {
+func (board *Board) Init(sim core.Sim, deps map[string]string) {
 	board.cmdSrc = sim.GetComp(deps["CmdSrc"]).(core.CmdSrc)
 }
 
@@ -125,8 +123,10 @@ func (board *Board) Update() {
 	}
 
 	if cmd.Actions&core.ACTION1 > 0 {
-		x := int(float32(cmd.X) / 50 / board.scale)
-		y := int(float32(cmd.Y) / 50 / board.scale)
+		x := ((cmd.X + 1000) * board.sz / 2000)
+		y := ((cmd.Y + 1000) * board.sz / 2000)
+
+		fmt.Println(x, y, cmd.X, cmd.Y)
 		if x >= 0 && x < board.sz && y >= 0 && y < board.sz {
 			if board.place(x, y) {
 				board.next.plr = board.curr.plr%2 + 1

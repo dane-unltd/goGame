@@ -37,7 +37,7 @@ func main() {
 	sim := core.NewClient(os.Args[0], host)
 	defer sim.Quit()
 
-	sim.AddComp(false, 0, NewBoard(sp, sz, 1.0))
+	sim.AddComp(false, 0, NewBoard(sp, sz))
 	sim.AddComp(true, 0, NewBrdDrawer())
 
 	sim.Run()
