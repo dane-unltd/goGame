@@ -78,7 +78,7 @@ func (board *Board) Id() string {
 	return "Board"
 }
 
-func (board *Board) Init(sim core.Sim, deps map[string]string) {
+func (board *Board) Init(sim core.Sim, res *core.ResMgr, deps map[string]string) {
 	board.cmdSrc = sim.GetComp(deps["CmdSrc"]).(core.CmdSrc)
 }
 
@@ -108,9 +108,7 @@ func (board *Board) Update() {
 		pId = board.curr.plr
 	}
 
-	cmd := board.cmdSrc.Cmd(pId)
-
-	if cmd.Actions&core.ACTION2 > 0 {
+	if board.cmdSrc.Active(pId, "pass") {
 		board.next.plr = board.curr.plr%2 + 1
 		board.next.pass = true
 		if board.curr.pass == true {
@@ -122,11 +120,11 @@ func (board *Board) Update() {
 		return
 	}
 
-	if cmd.Actions&core.ACTION1 > 0 {
-		x := ((cmd.X + 1000) * board.sz / 2000)
-		y := ((cmd.Y + 1000) * board.sz / 2000)
+	if board.cmdSrc.Active(pId, "place") {
+		X, Y := board.cmdSrc.Point(pId)
+		x := ((X + 1000) * board.sz / 2000)
+		y := ((Y + 1000) * board.sz / 2000)
 
-		fmt.Println(x, y, cmd.X, cmd.Y)
 		if x >= 0 && x < board.sz && y >= 0 && y < board.sz {
 			if board.place(x, y) {
 				board.next.plr = board.curr.plr%2 + 1
