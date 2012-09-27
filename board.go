@@ -78,8 +78,8 @@ func (board *Board) Id() string {
 	return "Board"
 }
 
-func (board *Board) Init(sim core.Sim, res *core.ResMgr, deps map[string]string) {
-	board.cmdSrc = sim.GetComp(deps["CmdSrc"]).(core.CmdSrc)
+func (board *Board) Init(sim core.Sim, res *core.ResMgr) {
+	board.cmdSrc = sim.Comp("CltRx").(core.CmdSrc)
 }
 
 func (board *Board) Swap() {

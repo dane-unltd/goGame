@@ -18,8 +18,8 @@ func NewBrdDrawer() *BrdDrawer {
 func (brdDrw *BrdDrawer) Swap() {
 }
 
-func (brdDrw *BrdDrawer) Init(sim core.Sim, res *core.ResMgr, deps map[string]string) {
-	brdDrw.board = sim.GetComp(deps["Board"]).(*Board)
+func (brdDrw *BrdDrawer) Init(sim core.Sim, res *core.ResMgr) {
+	brdDrw.board = sim.Comp("Board").(*Board)
 }
 
 func (brdDrw *BrdDrawer) Update() {
